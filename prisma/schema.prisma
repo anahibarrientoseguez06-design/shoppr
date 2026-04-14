@@ -1,0 +1,85 @@
+// Shoppr — Bolivian Marketplace
+// Learn more about Prisma: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  BUYER
+  TRAVELER
+  ADMIN
+}
+
+enum OrderStatus {
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum OfferStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(BUYER)
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  orders          Order[]          @relation("BuyerOrders")
+  offers          Offer[]          @relation("TravelerOffers")
+  travelerProfile TravelerProfile?
+}
+
+model Order {
+  id           String      @id @default(cuid())
+  title        String
+  description  String
+  productUrl   String?
+  productPrice Float
+  reward       Float
+  status       OrderStatus @default(OPEN)
+  category     String?
+  deliveryCity String?
+  notes        String?
+  buyerId      String
+  createdAt    DateTime    @default(now())
+
+  buyer  User    @relation("BuyerOrders", fields: [buyerId], references: [id])
+  offers Offer[]
+}
+
+model Offer {
+  id             String      @id @default(cuid())
+  orderId        String
+  travelerId     String
+  proposedReward Float
+  message        String
+  status         OfferStatus @default(PENDING)
+  createdAt      DateTime    @default(now())
+
+  order    Order @relation(fields: [orderId], references: [id])
+  traveler User  @relation("TravelerOffers", fields: [travelerId], references: [id])
+}
+
+model TravelerProfile {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  isApproved     Boolean  @default(false)
+  travelHistory  Json?
+  createdAt      DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
