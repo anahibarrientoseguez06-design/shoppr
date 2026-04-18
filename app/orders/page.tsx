@@ -26,14 +26,20 @@ async function OrdersList({
   if (category) where.category = category;
   if (q) where.title = { contains: q, mode: "insensitive" };
 
-  const orders = await prisma.order.findMany({
-    where,
-    include: {
-      buyer: { select: { id: true, name: true } },
-      _count: { select: { offers: true } },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  let orders: Awaited<ReturnType<typeof prisma.order.findMany>> = [];
+
+  try {
+    orders = await prisma.order.findMany({
+      where,
+      include: {
+        buyer: { select: { id: true, name: true } },
+        _count: { select: { offers: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+  } catch {
+    // BD no disponible — mostrar estado vacío
+  }
 
   if (orders.length === 0) {
     return (
@@ -74,11 +80,17 @@ async function OrdersList({
 }
 
 export default async function OrdersPage({ searchParams }: PageProps) {
-  const [{ category, q }, session, totalOpen] = await Promise.all([
+  const [{ category, q }, session] = await Promise.all([
     searchParams,
     getServerSession(authOptions),
-    prisma.order.count({ where: { status: "OPEN" } }),
   ]);
+
+  let totalOpen = 0;
+  try {
+    totalOpen = await prisma.order.count({ where: { status: "OPEN" } });
+  } catch {
+    // BD no disponible
+  }
 
   const isLoggedIn = !!session;
 

@@ -74,12 +74,20 @@ const features = [
 ];
 
 export default async function Home() {
-  // Stats reales desde Supabase
-  const [openOrders, activeTravelers, completedOrders] = await Promise.all([
-    prisma.order.count({ where: { status: "OPEN" } }),
-    prisma.travelerProfile.count({ where: { isApproved: true } }),
-    prisma.order.count({ where: { status: "COMPLETED" } }),
-  ]);
+  // Stats reales desde Supabase — fallback a 0 si la BD no responde
+  let openOrders = 0;
+  let activeTravelers = 0;
+  let completedOrders = 0;
+
+  try {
+    [openOrders, activeTravelers, completedOrders] = await Promise.all([
+      prisma.order.count({ where: { status: "OPEN" } }),
+      prisma.travelerProfile.count({ where: { isApproved: true } }),
+      prisma.order.count({ where: { status: "COMPLETED" } }),
+    ]);
+  } catch {
+    // Supabase no disponible — la página carga igual con valores en 0
+  }
 
   return (
     <>
